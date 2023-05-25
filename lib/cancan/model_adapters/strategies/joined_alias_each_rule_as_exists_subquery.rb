@@ -14,14 +14,17 @@ module CanCan
         end
 
         def double_exists_sql
-          double_exists_sql = ''
+          cans, cannots = compressed_rules.partition(&:can_rule?)
 
-          compressed_rules.each_with_index do |rule, index|
-            double_exists_sql << ' OR ' if index.positive?
-            double_exists_sql << "EXISTS (#{sub_query_for_rule(rule).to_sql})"
+          if !cans.empty?
+            can_sql = cans.map { |rule| "EXISTS (#{sub_query_for_rule(rule).to_sql})" }.join(' OR ')
+            can_sql = "(#{can_sql})" if cans.size > 1
           end
-
-          double_exists_sql
+          if !cannots.empty?
+            cannot_sql = cannots.map { |rule| "EXISTS (#{sub_query_for_rule(rule.flip).to_sql})" }.join(' OR ')
+            cannot_sql = "NOT (#{cannot_sql})"
+          end
+          [can_sql, cannot_sql].compact.join(' AND ')
         end
 
         def sub_query_for_rule(rule)

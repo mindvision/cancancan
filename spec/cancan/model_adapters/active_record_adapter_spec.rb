@@ -158,6 +158,21 @@ RSpec.describe CanCan::ModelAdapters::ActiveRecordAdapter do
         expect(Article.accessible_by(@ability)).to eq([article1])
       end
 
+      it 'fetches only spammed articles' do
+        @ability.can :read, Article, comments: {spam: true}
+        article1 = Article.create!(comments: [Comment.create!(spam: true)])
+        Article.create!(comments: [Comment.create!(spam: false)])
+        expect(Article.accessible_by(@ability)).to eq([article1])
+      end
+
+      it 'fetches only spammed articles when using cannot' do
+        @ability.can :read, Article
+        @ability.cannot :read, Article, comments: {spam: false}
+        article1 = Article.create!(comments: [Comment.create!(spam: true)])
+        Article.create!(comments: [Comment.create!(spam: false)])
+        expect(Article.accessible_by(@ability)).to eq([article1])
+      end
+
       it 'is for only active record classes' do
         if ActiveRecord.version > Gem::Version.new('5')
           expect(CanCan::ModelAdapters::ActiveRecord5Adapter).to_not be_for_class(Object)
