@@ -5,7 +5,12 @@ module CanCan
     strategies = [:left_join]
 
     unless does_not_support_subquery_strategy?
-      strategies.push(:joined_alias_exists_subquery, :joined_alias_each_rule_as_exists_subquery, :subquery)
+      strategies.push(
+        :joined_alias_exists_subquery,
+        :joined_alias_each_rule_as_exists_subquery,
+        :subquery,
+        :union_subquery,
+      )
     end
 
     strategies

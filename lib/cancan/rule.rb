@@ -100,6 +100,10 @@ module CanCan
       @attributes.include?(attribute.to_sym)
     end
 
+    def flip
+      self.class.new(!base_behavior, actions, subjects, conditions, &block)
+    end
+
     private
 
     def matches_action?(action)

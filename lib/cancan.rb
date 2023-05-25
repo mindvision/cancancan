@@ -26,4 +26,5 @@ if defined? ActiveRecord
   require 'cancan/model_adapters/strategies/joined_alias_exists_subquery'
   require 'cancan/model_adapters/strategies/left_join'
   require 'cancan/model_adapters/strategies/subquery'
+  require 'cancan/model_adapters/strategies/union_subquery'
 end
