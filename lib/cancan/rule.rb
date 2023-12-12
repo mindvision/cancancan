@@ -37,7 +37,7 @@ module CanCan
 
     def inspect
       repr = "#<#{self.class.name}"
-      repr += "#{@base_behavior ? 'can' : 'cannot'} #{@actions.inspect}, #{@subjects.inspect}, #{@attributes.inspect}"
+      repr += " #{@base_behavior ? 'can' : 'cannot'} #{@actions.inspect}, #{@subjects.inspect}, #{@attributes.inspect}"
 
       if with_scope?
         repr += ", #{@conditions.where_values_hash}"
@@ -98,6 +98,10 @@ module CanCan
       return @base_behavior if attribute.nil?
 
       @attributes.include?(attribute.to_sym)
+    end
+
+    def flip
+      self.class.new(!base_behavior, actions, subjects, conditions, &block)
     end
 
     private

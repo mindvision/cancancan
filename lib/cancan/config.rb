@@ -5,7 +5,12 @@ module CanCan
     strategies = [:left_join]
 
     unless does_not_support_subquery_strategy?
-      strategies.push(:joined_alias_exists_subquery, :joined_alias_each_rule_as_exists_subquery, :subquery)
+      strategies.push(
+        :joined_alias_exists_subquery,
+        :joined_alias_each_rule_as_exists_subquery,
+        :subquery,
+        :union_subquery,
+      )
     end
 
     strategies
@@ -48,7 +53,8 @@ module CanCan
   #                `distinct` is not reliable in some cases. See
   #                https://github.com/CanCanCommunity/cancancan/pull/605
   def self.accessible_by_strategy
-    return @accessible_by_strategy if @accessible_by_strategy
+    set_strategy = thread_local_accessible_by_strategy || @accessible_by_strategy
+    return set_strategy if set_strategy
 
     @accessible_by_strategy = default_accessible_by_strategy
   end
@@ -66,11 +72,6 @@ module CanCan
 
   def self.accessible_by_strategy=(value)
     validate_accessible_by_strategy!(value)
-
-    if value == :subquery && does_not_support_subquery_strategy?
-      raise ArgumentError, 'accessible_by_strategy = :subquery requires ActiveRecord 5 or newer'
-    end
-
     @accessible_by_strategy = value
   end
 
@@ -79,8 +80,8 @@ module CanCan
 
     validate_accessible_by_strategy!(value)
 
+    strategy_was = @accessible_by_strategy
     begin
-      strategy_was = accessible_by_strategy
       @accessible_by_strategy = value
       yield
     ensure
@@ -88,10 +89,33 @@ module CanCan
     end
   end
 
-  def self.validate_accessible_by_strategy!(value)
-    return if valid_accessible_by_strategies.include?(value)
+  def self.thread_local_accessible_by_strategy
+    Thread.current[:cancan_thread_local_accessible_by_strategy]
+  end
 
-    raise ArgumentError, "accessible_by_strategy must be one of #{valid_accessible_by_strategies.join(', ')}"
+  def self.thread_local_accessible_by_strategy=(value)
+    validate_accessible_by_strategy!(value) if value
+    Thread.current[:cancan_thread_local_accessible_by_strategy] = value
+  end
+
+  def self.with_thread_local_accessible_by_strategy(value)
+    strategy_was = thread_local_accessible_by_strategy
+    begin
+      self.thread_local_accessible_by_strategy = value
+      yield
+    ensure
+      self.thread_local_accessible_by_strategy = strategy_was
+    end
+  end
+
+  def self.validate_accessible_by_strategy!(value)
+    if !valid_accessible_by_strategies.include?(value)
+      raise ArgumentError, "accessible_by_strategy must be one of #{valid_accessible_by_strategies.join(', ')}"
+    end
+
+    if value == :subquery && does_not_support_subquery_strategy?
+      raise ArgumentError, 'accessible_by_strategy = :subquery requires ActiveRecord 5 or newer'
+    end
   end
 
   def self.does_not_support_subquery_strategy?
